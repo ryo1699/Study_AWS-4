@@ -1,0 +1,213 @@
+openapi: 3.0.0
+info:
+  title: タスク管理 API
+  version: 1.0.0
+  description: シンプルなタスク管理ツールの REST API ドキュメント
+  contact:
+    name: API サポート
+    email: support@example.com
+servers:
+  - url: http://localhost:3000/api
+    description: ローカル開発サーバー
+components:
+  schemas:
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+          description: タスクの一意な識別子
+        title:
+          type: string
+          example: ミーティング資料を準備する
+          description: タスクのタイトル
+        description:
+          type: string
+          example: 月次報告会議のスライドを作成する
+          description: タスクの詳細説明
+        status:
+          type: string
+          enum:
+            - pending
+            - in_progress
+            - done
+          example: pending
+          description: タスクのステータス
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-05-07T10:00:00.000Z'
+          description: 作成日時（ISO 8601）
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-05-07T12:00:00.000Z'
+          description: 最終更新日時（ISO 8601）
+      required:
+        - id
+        - title
+        - status
+        - createdAt
+        - updatedAt
+    TaskInput:
+      type: object
+      properties:
+        title:
+          type: string
+          example: ミーティング資料を準備する
+          description: タスクのタイトル（必須）
+        description:
+          type: string
+          example: 月次報告会議のスライドを作成する
+          description: タスクの詳細説明（任意）
+        status:
+          type: string
+          enum:
+            - pending
+            - in_progress
+            - done
+          example: pending
+          description: 'タスクのステータス（デフォルト: pending）'
+      required:
+        - title
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          example: タスクが見つかりません
+          description: エラーの説明
+      required:
+        - message
+tags:
+  - name: Tasks
+    description: タスクの CRUD 操作
+paths:
+  /tasks:
+    get:
+      summary: タスク一覧の取得
+      description: 登録されているすべてのタスクを返します。statusでフィルタリングできます。
+      tags:
+        - Tasks
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum:
+              - pending
+              - in_progress
+              - done
+          description: フィルタするステータス
+      responses:
+        '200':
+          description: タスク一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+    post:
+      summary: タスクの作成
+      description: 新しいタスクを作成します。
+      tags:
+        - Tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskInput'
+      responses:
+        '201':
+          description: 作成されたタスク
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /tasks/{id}:
+    get:
+      summary: タスクの取得
+      description: 指定したIDのタスクを返します。
+      tags:
+        - Tasks
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: タスクID
+      responses:
+        '200':
+          description: タスク詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '404':
+          description: タスクが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: タスクの更新
+      description: 指定したIDのタスクを更新します。
+      tags:
+        - Tasks
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: タスクID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskInput'
+      responses:
+        '200':
+          description: 更新されたタスク
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '404':
+          description: タスクが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: タスクの削除
+      description: 指定したIDのタスクを削除します。
+      tags:
+        - Tasks
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: タスクID
+      responses:
+        '204':
+          description: 削除成功（レスポンスボディなし）
+        '404':
+          description: タスクが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'

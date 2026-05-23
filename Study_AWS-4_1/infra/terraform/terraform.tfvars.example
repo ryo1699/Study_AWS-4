@@ -1,0 +1,8 @@
+db_password = "CHANGE_ME_STRONG_PASSWORD"
+allowed_ssh_cidr = "YOUR_GLOBAL_IP/32"
+bastion_key_name = "ryo-key"
+
+slack_webhook_url = "https://hooks.slack.com/services/XXX/YYY/ZZZ"
+cpu_alarm_threshold = 5
+cpu_alarm_evaluation_periods = 1
+enable_debug_error_endpoint = true

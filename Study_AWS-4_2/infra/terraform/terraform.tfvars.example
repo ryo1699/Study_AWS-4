@@ -1,0 +1,4 @@
+bucket_name_suffix = "ryo1699"
+db_password = "CHANGE_ME_STRONG_PASSWORD"
+allowed_ssh_cidr = "YOUR_GLOBAL_IP/32"
+bastion_key_name = "ryo-key"

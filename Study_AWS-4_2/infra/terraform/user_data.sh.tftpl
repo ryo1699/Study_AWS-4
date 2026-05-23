@@ -1,0 +1,60 @@
+#!/bin/bash
+set -euxo pipefail
+
+dnf update -y
+dnf install -y python3 python3-pip postgresql15
+
+id studyapi >/dev/null 2>&1 || useradd --system --home-dir "${app_home}" --shell /sbin/nologin studyapi
+mkdir -p "${app_home}/current/app"
+chown -R studyapi:studyapi "${app_home}"
+
+cat > /etc/study-aws-4-task2.env <<EOF
+DATABASE_URL=${database_url}
+LOG_LEVEL=INFO
+ENABLE_DEBUG_ERROR_ENDPOINT=false
+EOF
+chmod 600 /etc/study-aws-4-task2.env
+
+cat > "${app_home}/current/app/main.py" <<'PY'
+from fastapi import FastAPI
+
+app = FastAPI(title="Study AWS 4 Task 2 bootstrap API")
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "mode": "bootstrap"}
+PY
+
+touch "${app_home}/current/app/__init__.py"
+cat > "${app_home}/current/requirements.txt" <<'REQ'
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+REQ
+
+python3 -m venv "${app_home}/venv"
+"${app_home}/venv/bin/pip" install --upgrade pip
+"${app_home}/venv/bin/pip" install -r "${app_home}/current/requirements.txt"
+
+cat > "/etc/systemd/system/${app_service_name}.service" <<EOF
+[Unit]
+Description=Study AWS 4 Task 2 FastAPI service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=studyapi
+Group=studyapi
+WorkingDirectory=${app_home}/current
+EnvironmentFile=/etc/study-aws-4-task2.env
+ExecStart=${app_home}/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable "${app_service_name}"
+systemctl restart "${app_service_name}"
