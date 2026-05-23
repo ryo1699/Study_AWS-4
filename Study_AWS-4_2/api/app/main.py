@@ -1,5 +1,6 @@
 import logging
 import time
+from typing import Optional
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, Request, Response, status
@@ -136,7 +137,7 @@ def debug_error() -> ErrorResponse:
 
 
 @app.get("/api/tasks", response_model=list[TaskResponse])
-def list_tasks(status: TaskStatus | None = None, db: Session = Depends(get_db)) -> list[TaskResponse]:
+def list_tasks(status: Optional[TaskStatus] = None, db: Session = Depends(get_db)) -> list[TaskResponse]:
     stmt = select(Task)
     if status is not None:
         stmt = stmt.where(Task.status == status.value)
