@@ -56,7 +56,7 @@ Podの状態を確認します。
 kubectl get pods -n study-aws-4-3 -w
 ```
 
-期待結果:
+期待結果:　終わらないから、確認できたらctrl+cで終わらせていい
 
 ```text
 postgres-...   1/1   Running
