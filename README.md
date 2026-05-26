@@ -1,12 +1,13 @@
 # Study_AWS-4
 
-勉強会2026-4の課題1〜3の実装です。`Study_AWS-4_4` は今回の対象外なので含めていません。
+勉強会2026-4の課題1〜4の実装です。
 
 | フォルダ | 内容 |
 | --- | --- |
 | `Study_AWS-4_1` | CloudFront + ALB + ECR + ECS + RDS のREST API。CloudWatch Logs/Insights、CPU Alarm、Slack通知を追加 |
 | `Study_AWS-4_2` | CloudFront + ALB + EC2 + RDS のREST API。GitHub ActionsからSSMでEC2内を更新 |
 | `Study_AWS-4_3` | ローカルk8s上のFastAPI Deployment + PostgreSQL Deployment(replica=1) |
+| `Study_AWS-4_4` | CloudFront + ALB + EC2 + Docker + ECR + RDS のREST API。EC2上ではvenvではなくECRイメージをdocker runで起動 |
 
 提供された原本の `openapi.yaml` はリポジトリ直下にも置いています。各課題フォルダにも同じ仕様を置き、実装の起点として参照できるようにしています。
 

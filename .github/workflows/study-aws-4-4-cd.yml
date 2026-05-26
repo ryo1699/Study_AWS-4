@@ -1,0 +1,91 @@
+name: Deploy Study AWS 4 Task 4 EC2 Docker API
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "Study_AWS-4_4/api/**"
+      - ".github/workflows/study-aws-4-4-cd.yml"
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECR_REPOSITORY: ${{ vars.STUDY_AWS_4_4_ECR_REPOSITORY }}
+  APP_INSTANCE_ID: ${{ vars.STUDY_AWS_4_4_APP_INSTANCE_ID }}
+  CONTAINER_NAME: study-aws-4-task4-api
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        id: build-image
+        working-directory: Study_AWS-4_4/api
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
+            -t "$ECR_REGISTRY/$ECR_REPOSITORY:latest" \
+            .
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy on EC2 through SSM
+        id: ssm
+        env:
+          IMAGE_URI: ${{ steps.build-image.outputs.image }}
+        run: |
+          cat > ssm-commands.json <<EOF
+          {
+            "commands": [
+              "set -euxo pipefail",
+              "sudo /opt/study-aws-4-task4/deploy.sh $IMAGE_URI",
+              "sudo docker ps --filter name=$CONTAINER_NAME",
+              "curl --retry 10 --retry-delay 3 --retry-connrefused -fsS http://localhost:8000/health"
+            ]
+          }
+          EOF
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "$APP_INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy Study AWS 4 Task 4 Docker API ${{ github.sha }}" \
+            --parameters file://ssm-commands.json \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for SSM command
+        run: |
+          aws ssm wait command-executed \
+            --command-id "${{ steps.ssm.outputs.command_id }}" \
+            --instance-id "$APP_INSTANCE_ID"
+
+      - name: Print SSM command output
+        run: |
+          aws ssm get-command-invocation \
+            --command-id "${{ steps.ssm.outputs.command_id }}" \
+            --instance-id "$APP_INSTANCE_ID" \
+            --query '{Status:Status,StandardOutputContent:StandardOutputContent,StandardErrorContent:StandardErrorContent}'

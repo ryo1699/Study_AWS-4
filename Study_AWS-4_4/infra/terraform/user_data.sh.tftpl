@@ -1,0 +1,46 @@
+#!/bin/bash
+set -euxo pipefail
+
+dnf update -y
+dnf install -y docker postgresql15
+if ! command -v aws >/dev/null 2>&1; then
+  dnf install -y awscli-2 || dnf install -y awscli
+fi
+
+systemctl enable --now docker
+
+mkdir -p "${app_home}"
+
+cat > /etc/study-aws-4-task4.env <<EOF
+DATABASE_URL=${database_url}
+LOG_LEVEL=INFO
+ENABLE_DEBUG_ERROR_ENDPOINT=false
+EOF
+chmod 600 /etc/study-aws-4-task4.env
+
+cat > "${app_home}/deploy.sh" <<'DEPLOY'
+#!/bin/bash
+set -euxo pipefail
+
+IMAGE_URI="$1"
+if [ -z "$IMAGE_URI" ]; then
+  echo "usage: deploy.sh <image-uri>" >&2
+  exit 1
+fi
+
+REGISTRY_HOST="$(printf '%s' "$IMAGE_URI" | cut -d/ -f1)"
+aws ecr get-login-password --region "${aws_region}" | docker login --username AWS --password-stdin "$REGISTRY_HOST"
+
+docker pull "$IMAGE_URI"
+docker rm -f "${app_service_name}" >/dev/null 2>&1 || true
+docker run -d \
+  --name "${app_service_name}" \
+  --restart always \
+  --env-file /etc/study-aws-4-task4.env \
+  -p 8000:8000 \
+  "$IMAGE_URI"
+
+docker image prune -f
+DEPLOY
+
+chmod 755 "${app_home}/deploy.sh"
